@@ -14,6 +14,7 @@
         <jetty.daemon>true</jetty.daemon>
         <webdriver.base.url>http://localhost:${jetty.port}</webdriver.base.url>
         <webdriver.driver>firefox</webdriver.driver>
+        <webdriver.remote.url>http://localhost:4444/wd/hub</webdriver.remote.url>
         <thucydides.version>0.9.275</thucydides.version>
     </properties>
     <dependencies>
@@ -112,6 +113,7 @@
                             <systemPropertyVariables>
                                 <webdriver.base.url>${webdriver.base.url}</webdriver.base.url>
                                 <webdriver.driver>${webdriver.driver}</webdriver.driver>
+                                <webdriver.remote.url>${webdriver.remote.url}</webdriver.remote.url>
                             </systemPropertyVariables>
                         </configuration>
                     </execution>
