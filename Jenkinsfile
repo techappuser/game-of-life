@@ -1,3 +1,4 @@
+#!groovy
 docker.image('cloudbees/java-build-tools:0.0.5').inside {
 
     checkout scm
@@ -7,7 +8,7 @@ docker.image('cloudbees/java-build-tools:0.0.5').inside {
     wrap([$class: 'ConfigFileBuildWrapper',
         managedFiles: [[fileId: 'maven-settings-for-gameoflife', targetLocation: "${mavenSettingsFile}"]]]) {
 
-        sh "mvn -s ${mavenSettingsFile} -DaltSnapshotDeploymentRepository=cleclerc.artifactoryonline.com::default::https://cleclerc.artifactoryonline.com/cleclerc/libs-snapshot-local clean source:jar deploy "
+        sh "mvn -s ${mavenSettingsFile} -DaltSnapshotDeploymentRepository=cleclerc.artifactoryonline.com::default::https://cleclerc.artifactoryonline.com/cleclerc/libs-snapshot-local clean source:jar deploy"
     }
 
     stage 'Deploy Web App On CloudFoundry'
@@ -22,16 +23,17 @@ docker.image('cloudbees/java-build-tools:0.0.5').inside {
            sh 'cf push gameoflife-dev -p gameoflife-web/target/gameoflife.war'
     }
 
-    stash name: 'acceptance-tests', includes: 'gameoflife-acceptance-tests, gameoflife-web/target/gameoflife.war'
+    stash name: 'acceptance-tests', includes: 'gameoflife-acceptance-tests/,gameoflife-web/target/gameoflife.war'
 }
 
 stage 'Test Web App with Selenium'
-mail body: "Start web browser tests on http://gameoflife-dev.hackney.cf-app.com/ ?",subject: "Start web browser tests on http://gameoflife-dev.hackney.cf-app.com/ ?", to: 'cleclerc@cloudbees.com'
+mail body: "Start web browser tests on http://gameoflife-dev.hackney.cf-app.com/ ?", subject: "Start web browser tests on http://gameoflife-dev.hackney.cf-app.com/ ?", to: 'cleclerc@cloudbees.com'
 input "Start web browser tests on http://gameoflife-dev.hackney.cf-app.com/ ?"
 
+checkpoint 'Web Browser Tests'
+
 node {
-    checkpoint 'Web Browser Tests'
-    unstash name: 'acceptance-tests'
+    unstash 'acceptance-tests'
 
     // web browser tests are fragile, test up to 3 times
     retry(3) {
