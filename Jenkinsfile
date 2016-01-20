@@ -16,7 +16,7 @@ docker.image('cloudbees/java-build-tools:0.0.6').inside {
         step([$class: 'JUnitResultArchiver', testResults: '**/target/surefire-reports/TEST-*.xml'])
         step([$class: 'JavadocArchiver', javadocDir: 'gameoflife-core/target/site/apidocs/'])
 
-        // Use hudson.plugins.checkstyle.CheckStylePublisher if JSLint Publisher Plugin or JSHint Publisher Plugin is installed
+        // Use fully qualified hudson.plugins.checkstyle.CheckStylePublisher if JSLint Publisher Plugin or JSHint Publisher Plugin is installed
         step([$class: 'hudson.plugins.checkstyle.CheckStylePublisher', pattern: '**/target/checkstyle-result.xml'])
         // In real life, PMD and Findbugs are unlikely to be used simultaneously
         step([$class: 'PmdPublisher', pattern: '**/target/pmd.xml'])
