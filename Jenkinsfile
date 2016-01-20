@@ -6,7 +6,7 @@ docker.image('cloudbees/java-build-tools:0.0.6').inside {
 
     def mavenSettingsFile = "${pwd()}/.m2/settings.xml"
 
-    stage 'Build Web App'
+    stage 'Build'
     wrap([$class: 'ConfigFileBuildWrapper',
         managedFiles: [[fileId: 'maven-settings-for-gameoflife', targetLocation: "${mavenSettingsFile}"]]]) {
 
@@ -24,8 +24,22 @@ docker.image('cloudbees/java-build-tools:0.0.6').inside {
         step([$class: 'FindBugsPublisher', pattern: '**/findbugsXml.xml'])
         step([$class: 'AnalysisPublisher'])
     }
+    stash name: 'acceptance-tests', includes: 'gameoflife-acceptance-tests/,gameoflife-web/target/gameoflife.war'
+}
 
-    stage name:'Deploy Web App To AWS Beanstalk', concurrency: 1
+stage name:'Deploy to AWS Beanstalk', concurrency: 1
+mail \
+    to: 'cleclerc@cloudbees.com',
+    subject: "Deploy version #${env.BUILD_NUMBER} on http://game-of-life-qa.elasticbeanstalk.com/ ?",
+    body: """\
+       Deploy game-of-life#${env.BUILD_NUMBER} and start web browser tests on http://game-of-life-qa.elasticbeanstalk.com/ ?
+       Approve/reject on ${env.BUILD_URL}.
+       """
+
+input "Deploy on http://game-of-life-qa.elasticbeanstalk.com/ and run Selenium tests?"
+checkpoint 'Deploy to QA'
+
+docker.image('cloudbees/java-build-tools:0.0.6').inside {
 
     wrap([$class: 'AmazonAwsCliBuildWrapper', credentialsId: 'aws-beanstalk-credentials', defaultRegion: 'us-east-1']) {
 
@@ -53,15 +67,9 @@ docker.image('cloudbees/java-build-tools:0.0.6').inside {
             }
         }
     }
-
-    stash name: 'acceptance-tests', includes: 'gameoflife-acceptance-tests/,gameoflife-web/target/gameoflife.war'
 }
 
-stage 'Test Web App with Selenium'
-mail body: "Start web browser tests on http://game-of-life-qa.elasticbeanstalk.com/ ?", subject: "Start web browser tests on http://game-of-life-qa.elasticbeanstalk.com/ ?", to: 'cleclerc@cloudbees.com'
-input "Start web browser tests on http://game-of-life-qa.elasticbeanstalk.com/ ?"
-
-checkpoint 'Web Browser Tests'
+stage name: 'Test with Selenium', concurrency: 1
 
 node {
     unstash 'acceptance-tests'
