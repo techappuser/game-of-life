@@ -3,13 +3,26 @@
 docker.image('cloudbees/java-build-tools:0.0.6').inside {
 
     checkout scm
+
     def mavenSettingsFile = "${pwd()}/.m2/settings.xml"
 
     stage 'Build Web App'
     wrap([$class: 'ConfigFileBuildWrapper',
         managedFiles: [[fileId: 'maven-settings-for-gameoflife', targetLocation: "${mavenSettingsFile}"]]]) {
 
-        sh "mvn -s ${mavenSettingsFile} clean package"
+        sh "mvn -s ${mavenSettingsFile} clean source:jar javadoc:javadoc checkstyle:checkstyle pmd:pmd findbugs:findbugs package"
+
+        step([$class: 'ArtifactArchiver', artifacts: 'gameoflife-web/target/*.war'])
+        step([$class: 'WarningsPublisher', consoleParsers: [[parserName: 'Maven']]])
+        step([$class: 'JUnitResultArchiver', testResults: '**/target/surefire-reports/TEST-*.xml'])
+        step([$class: 'JavadocArchiver', javadocDir: 'gameoflife-core/target/site/apidocs/'])
+
+        // Use fully qualified hudson.plugins.checkstyle.CheckStylePublisher if JSLint Publisher Plugin or JSHint Publisher Plugin is installed
+        step([$class: 'hudson.plugins.checkstyle.CheckStylePublisher', pattern: '**/target/checkstyle-result.xml'])
+        // In real life, PMD and Findbugs are unlikely to be used simultaneously
+        step([$class: 'PmdPublisher', pattern: '**/target/pmd.xml'])
+        step([$class: 'FindBugsPublisher', pattern: '**/findbugsXml.xml'])
+        step([$class: 'AnalysisPublisher'])
     }
 
     stage name:'Deploy Web App To AWS Beanstalk', concurrency: 1
@@ -20,9 +33,11 @@ docker.image('cloudbees/java-build-tools:0.0.6').inside {
         def destinationWarFile = "gameoflife-${env.BUILD_NUMBER}.war"
         def versionLabel = "game-of-life#${env.BUILD_NUMBER}"
         def description = "${env.BUILD_URL}"
-        sh "aws s3 cp gameoflife-web/target/gameoflife.war s3://cloudbees-apps/$destinationWarFile"
-        sh "aws elasticbeanstalk create-application-version --source-bundle S3Bucket=cloudbees-apps,S3Key=$destinationWarFile --application-name game-of-life --version-label $versionLabel --description \\\"$description\\\""
-        sh "aws elasticbeanstalk update-environment --environment-name game-of-life-qa --application-name game-of-life --version-label $versionLabel --description \\\"$description\\\""
+        sh """\
+           aws s3 cp gameoflife-web/target/gameoflife.war s3://cloudbees-apps/$destinationWarFile
+           aws elasticbeanstalk create-application-version --source-bundle S3Bucket=cloudbees-apps,S3Key=$destinationWarFile --application-name game-of-life --version-label $versionLabel --description \\\"$description\\\"
+           aws elasticbeanstalk update-environment --environment-name game-of-life-qa --application-name game-of-life --version-label $versionLabel --description \\\"$description\\\"
+         """
         sleep 10L // wait for beanstalk to update the HealthStatus
 
         // WAIT FOR BEANSTALK DEPLOYMENT
@@ -59,9 +74,11 @@ node {
             wrap([$class: 'ConfigFileBuildWrapper',
                 managedFiles: [[fileId: 'maven-settings-for-gameoflife', targetLocation: "${mavenSettingsFile}"]]]) {
 
-                sh """
+                sh """\
+                   # debug info
                    # curl http://game-of-life-qa.elasticbeanstalk.com/
                    # curl -v http://localhost:4444/wd/hub
+
                    cd gameoflife-acceptance-tests
                    mvn -B -V -s ${mavenSettingsFile} verify -Dwebdriver.driver=remote -Dwebdriver.remote.url=http://localhost:4444/wd/hub -Dwebdriver.base.url=http://game-of-life-qa.elasticbeanstalk.com/
                 """
