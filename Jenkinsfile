@@ -8,7 +8,7 @@ docker.image('cloudbees/java-build-tools:0.0.5').inside {
     wrap([$class: 'ConfigFileBuildWrapper',
         managedFiles: [[fileId: 'maven-settings-for-gameoflife', targetLocation: "${mavenSettingsFile}"]]]) {
 
-        sh "mvn -s ${mavenSettingsFile} -DaltSnapshotDeploymentRepository=cleclerc.artifactoryonline.com::default::https://cleclerc.artifactoryonline.com/cleclerc/libs-snapshot-local clean source:jar deploy"
+        sh "mvn -s ${mavenSettingsFile} -DaltSnapshotDeploymentRepository=nexus.beesshop.org::default::http://nexus.beesshop.org/content/repositories/snapshots clean source:jar deploy"
     }
 
     stage 'Deploy Web App On CloudFoundry'
