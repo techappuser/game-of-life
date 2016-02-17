@@ -31,7 +31,7 @@ mail \
        """
 
 
-input "Deploy on http://gameoflife-ecs.beesshop.org/ and run Selenium tests?"
+input "Deploy on http://gameoflife-ecs.beesshop.org:8080/ and run Selenium tests?"
 checkpoint 'Deploy to QA'
 
 docker.image('cloudbees/java-build-tools:0.0.7.1').inside {
@@ -53,7 +53,7 @@ retry(3) { // web browser tests are fragile, test up to 3 times
             managedFiles: [[fileId: 'maven-settings-for-gameoflife', targetLocation: "${mavenSettingsFile}"]]]) {
 
             sh """
-                curl http://gameoflife-ecs.beesshop.org/
+                curl http://gameoflife-ecs.beesshop.org:8080/
                 cd gameoflife-acceptance-tests
                 mvn -s ${mavenSettingsFile} verify -Dwebdriver.driver=remote -Dwebdriver.base.url=http://gameoflife-ecs.beesshop.org:8080/
             """
