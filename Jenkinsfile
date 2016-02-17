@@ -1,7 +1,6 @@
 
 docker.image('cloudbees/java-build-tools:0.0.7.1').inside {
-    checkout scm
-
+    checkout([$class: 'GitSCM', branches: [[name: '*/amazon-ecs-pipeline']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[url: 'https://github.com/cyrille-leclerc/game-of-life.git']]])
     def mavenSettingsFile = "${pwd()}/.m2/settings.xml"
 
     stage 'Build Web App'
@@ -24,14 +23,14 @@ docker.withRegistry('', 'dockerhub-credentials') {
 stage 'Deploy ECS Service'
 mail \
     to: 'cleclerc@cloudbees.com',
-    subject: "Deploy version #${env.BUILD_NUMBER} on http://gameoflife-ecs.beesshop.org:8080/ ?",
+    subject: "Deploy version #${env.BUILD_NUMBER} on http://gameoflife-ecs.beesshop.org/ ?",
     body: """\
-       Deploy game-of-life#${env.BUILD_NUMBER} and start web browser tests on http://gameoflife-ecs.beesshop.org:8080/ ?
+       Deploy game-of-life#${env.BUILD_NUMBER} and start web browser tests on http://gameoflife-ecs.beesshop.org/ ?
        Approve/reject on ${env.BUILD_URL}.
        """
 
 
-input "Deploy on http://gameoflife-ecs.beesshop.org:8080/ and run Selenium tests?"
+input "Deploy on http://gameoflife-ecs.beesshop.org/ and run Selenium tests?"
 checkpoint 'Deploy to QA'
 
 docker.image('cloudbees/java-build-tools:0.0.7.1').inside {
@@ -41,7 +40,7 @@ docker.image('cloudbees/java-build-tools:0.0.7.1').inside {
         sleep 60
         sh "aws ecs update-service --service game-of-life --desired-count 1"
         sleep 20
-        echo "game-of-life#${env.BUILD_NUMBER} SUCCESSFULLY deployed to http://gameoflife-ecs.beesshop.org:8080/"
+        echo "game-of-life#${env.BUILD_NUMBER} SUCCESSFULLY deployed to http://gameoflife-ecs.beesshop.org/"
     }
 }
 
@@ -53,9 +52,9 @@ retry(3) { // web browser tests are fragile, test up to 3 times
             managedFiles: [[fileId: 'maven-settings-for-gameoflife', targetLocation: "${mavenSettingsFile}"]]]) {
 
             sh """
-                curl http://gameoflife-ecs.beesshop.org:8080/
+                curl http://gameoflife-ecs.beesshop.org/
                 cd gameoflife-acceptance-tests
-                mvn -s ${mavenSettingsFile} verify -Dwebdriver.driver=remote -Dwebdriver.base.url=http://gameoflife-ecs.beesshop.org:8080/
+                mvn -B -s ${mavenSettingsFile} verify -Dwebdriver.driver=remote -Dwebdriver.remote.url=http://localhost:4444/wd/hub -Dwebdriver.base.url=http://gameoflife-ecs.beesshop.org
             """
         }
     }
