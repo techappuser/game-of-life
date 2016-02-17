@@ -1,6 +1,6 @@
 
 docker.image('cloudbees/java-build-tools:0.0.7.1').inside {
-    checkout([$class: 'GitSCM', branches: [[name: '*/amazon-ecs-pipeline']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[url: 'https://github.com/cyrille-leclerc/game-of-life.git']]])
+    checkout scm
     def mavenSettingsFile = "${pwd()}/.m2/settings.xml"
 
     stage 'Build Web App'
@@ -37,24 +37,56 @@ docker.image('cloudbees/java-build-tools:0.0.7.1').inside {
     wrap([$class: 'AmazonAwsCliBuildWrapper', credentialsId: 'aws-cleclerc-admin', defaultRegion: 'us-east-1']) {
         // TODO THESE ARE PROBABLY NOT THE BEST ECS CALLS
         sh "aws ecs update-service --service game-of-life --desired-count 0"
-        sleep 60
+        timeout(time: 5, unit: 'MINUTES') {
+            waitUntil {
+                sh "aws ecs describe-services --services game-of-life > .amazon-ecs-service-status.json"
+
+                // parse `describe-services` output
+                def ecsServicesStatusAsJson = readFile(".amazon-ecs-service-status.json")
+                def ecsServicesStatus = new groovy.json.JsonSlurper().parseText(ecsServicesStatusAsJson)
+                println "$ecsServicesStatus"
+                def ecsServiceStatus = ecsServicesStatus.services[0]
+                return ecsServiceStatus.get('runningCount') == 0 && ecsServiceStatus.get('status') == "ACTIVE"
+            }
+        }
         sh "aws ecs update-service --service game-of-life --desired-count 1"
-        sleep 20
+        timeout(time: 5, unit: 'MINUTES') {
+            waitUntil {
+                sh "aws ecs describe-services --services game-of-life > .amazon-ecs-service-status.json"
+
+                // parse `describe-services` output
+                def ecsServicesStatusAsJson = readFile(".amazon-ecs-service-status.json")
+                def ecsServicesStatus = new groovy.json.JsonSlurper().parseText(ecsServicesStatusAsJson)
+                println "$ecsServicesStatus"
+                def ecsServiceStatus = ecsServicesStatus.services[0]
+                return ecsServiceStatus.get('runningCount') == 0 && ecsServiceStatus.get('status') == "ACTIVE"
+            }
+        }
+        timeout(time: 5, unit: 'MINUTES') {
+            waitUntil {
+                try {
+                    sh "curl http://gameoflife-ecs.beesshop.org/"
+                    return true
+                } catch (Exception e) {
+                    return false
+                }
+            }
+        }
         echo "game-of-life#${env.BUILD_NUMBER} SUCCESSFULLY deployed to http://gameoflife-ecs.beesshop.org/"
     }
 }
 
 stage 'Web Browser tests'
 retry(3) { // web browser tests are fragile, test up to 3 times
-    docker.image('cloudbees/java-build-tools:0.0.7.1').inside {
+    docker.image('cloudbees/java-build-tools:0.0.6').inside {
         def mavenSettingsFile = "${pwd()}/.m2/settings.xml"
         wrap([$class: 'ConfigFileBuildWrapper',
             managedFiles: [[fileId: 'maven-settings-for-gameoflife', targetLocation: "${mavenSettingsFile}"]]]) {
 
             sh """
-                curl http://gameoflife-ecs.beesshop.org/
+
                 cd gameoflife-acceptance-tests
-                mvn -B -s ${mavenSettingsFile} verify -Dwebdriver.driver=remote -Dwebdriver.remote.url=http://localhost:4444/wd/hub -Dwebdriver.base.url=http://gameoflife-ecs.beesshop.org
+                mvn -B -V -s ${mavenSettingsFile} verify -Dwebdriver.driver=remote -Dwebdriver.remote.url=http://localhost:4444/wd/hub -Dwebdriver.base.url=http://gameoflife-ecs.beesshop.org
             """
         }
     }
