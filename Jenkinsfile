@@ -1,3 +1,14 @@
+/* 
+    To build and deploy on Azure please ensure the following:
+    1) An Ubuntu 14.04 slave with the label "linux". Must have JDK 7 and Git installed
+    2) Set up a Maven tool installer called "maven-3.3"
+    3) Set up environment variables for:
+         azureHost : the host to use for deployment - from the Azure console
+         svchost : the public DNS name the app will be visible on
+    4) Credentials with the id of "azure-deployment-id" containing the ftps user:password for deployment
+
+*/
+
 node ("linux") {
 
     def local_path="gameoflife-web/target"
@@ -22,8 +33,14 @@ node ("linux") {
 
         sh "curl -T ${local_path}/${war} ftps://\"${env._user}\":${env._password}@${env.azureHost}${target}/"
     }
-
     
+    stage "Verify deployment"
+    
+    retry(count: 5) { 
+        echo "Checking for the application at ${env.svchost}/gameoflife"
+        sh "sleep 5 && curl ${env.svchost}/gameoflife"
+    }
+
 }
 
 def ensureMaven() {
