@@ -1,53 +1,77 @@
-/* 
-    To build and deploy on Azure please ensure the following:
-    1) An Ubuntu 14.04 slave with the label "linux". Must have JDK 7 and Git installed
-    2) Set up a Maven tool installer called "maven-3.3"
-    3) Set up environment variables for:
-         azureHost : the host to use for deployment - from the Azure console
-         svchost : the public DNS name the app will be visible on
-    4) Credentials with the id of "azure-deployment-id" containing the ftps user:password for deployment
+//Picking a build agent labeled "ec2" to run pipeline on
+node ('ec2'){
+  stage 'Pull from SCM'  
+  //Passing the pipeline the ID of my GitHub credentials and specifying the repo for my app
+  git credentialsId: '32f2c3c2-c19e-431a-b421-a4376fce1186', url: 'https://github.com/lavaliere/game-of-life.git'
+  stage 'Test Code'  
+  sh 'mvn install'
 
-*/
+  stage 'Build app' 
+  //Running the maven build and archiving the war
+  sh 'mvn install'
+  archive 'target/*.war'
+  
+  stage 'Package Image'
+  //Packaging the image into a Docker image
+  def pkg = docker.build ('lavaliere/game-of-life', '.')
 
-node ("linux") {
+  
+  stage 'Push Image to DockerHub'
+  //Pushing the packaged app in image into DockerHub
+  docker.withRegistry ('https://index.docker.io/v1/', 'ed17cd18-975e-4224-a231-014ecd23942b') {
+      sh 'ls -lart' 
+      pkg.push 'docker-demo'
+  }
+  
+  stage 'Stage image'
+  //Deploy image to staging in ECS
+  def buildenv = docker.image('cloudbees/java-build-tools:0.0.7.1')
+  buildenv.inside {
+    wrap([$class: 'AmazonAwsCliBuildWrapper', credentialsId: '20f6b2e4-7fbe-4655-8b4b-9842ec81bce2', defaultRegion: 'us-east-1']) {
+        sh "aws ecs update-service --service staging-game  --cluster staging --desired-count 0"
+        timeout(time: 5, unit: 'MINUTES') {
+            waitUntil {
+                sh "aws ecs describe-services --services staging-game  --cluster staging  > .amazon-ecs-service-status.json"
 
-    def local_path="gameoflife-web/target"
-    def war="gameoflife.war"
-    def target="/site/wwwroot/webapps"
+                // parse `describe-services` output
+                def ecsServicesStatusAsJson = readFile(".amazon-ecs-service-status.json")
+                def ecsServicesStatus = new groovy.json.JsonSlurper().parseText(ecsServicesStatusAsJson)
+                println "$ecsServicesStatus"
+                def ecsServiceStatus = ecsServicesStatus.services[0]
+                return ecsServiceStatus.get('runningCount') == 0 && ecsServiceStatus.get('status') == "ACTIVE"
+            }
+        }
+        sh "aws ecs update-service --service staging-game  --cluster staging --desired-count 1"
+        timeout(time: 5, unit: 'MINUTES') {
+            waitUntil {
+                sh "aws ecs describe-services --services staging-game --cluster staging > .amazon-ecs-service-status.json"
 
-    ensureMaven()
-
-    stage "Checkout"
-    git branch: 'azure-pipeline', url: 'https://github.com/harniman/game-of-life'
-
-    stage "Build"
-
-    sh "mvn clean package"
-    
-    stage "Deploy to Azure"
-
-    withCredentials([[$class: 'UsernamePasswordMultiBinding', 
-        credentialsId: 'azure-deployment-id', 
-        passwordVariable: '_password', 
-        usernameVariable: '_user']]) {
-
-        sh "curl -T ${local_path}/${war} ftps://\"${env._user}\":${env._password}@${env.azureHost}${target}/"
+                // parse `describe-services` output
+                def ecsServicesStatusAsJson = readFile(".amazon-ecs-service-status.json")
+                def ecsServicesStatus = new groovy.json.JsonSlurper().parseText(ecsServicesStatusAsJson)
+                println "$ecsServicesStatus"
+                def ecsServiceStatus = ecsServicesStatus.services[0]
+                return ecsServiceStatus.get('runningCount') == 0 && ecsServiceStatus.get('status') == "ACTIVE"
+            }
+        }
+        timeout(time: 5, unit: 'MINUTES') {
+            waitUntil {
+                try {
+                    sh "curl http://52.200.92.100:8080/gameoflife”
+                    return true
+                } catch (Exception e) {
+                    return false
+                }
+            }
+        }
+        echo "couchbase#${env.BUILD_NUMBER} SUCCESSFULLY deployed to http://52.200.92.100:8080/gameoflife”
+        }
     }
-    
-    stage "Verify deployment"
-    
-    retry(count: 5) { 
-        echo "Checking for the application at ${env.svchost}/gameoflife"
-        sh "sleep 5 && curl ${env.svchost}/gameoflife"
-    }
+        input 'Does staging http://52.200.92.100:8080/gameoflife look okay?'
+
+  
+  stage 'Deploy to ECS'
+  //kill old container
+  //deploy new container
 
 }
-
-def ensureMaven() {
-    env.PATH = "${tool 'maven-3.3'}/bin:${env.PATH}"
-}
-
-
-
-
-
