@@ -64,7 +64,7 @@ node ('ec2'){
                 }
             }
         }
-        echo "gameoflife#"${env.BUILD_NUMBER} SUCCESSFULLY deployed to http://52.200.92.100:80"
+        echo "gameoflife#${env.BUILD_NUMBER} SUCCESSFULLY deployed to http://52.200.92.100:80"
         }
     }
         input 'Does staging http://52.200.92.100:80 look okay?'
@@ -111,7 +111,7 @@ node ('ec2'){
                 }
             }
         }
-        echo "gameoflife#"${env.BUILD_NUMBER} SUCCESSFULLY deployed to http://52.202.249.4:80"
+        echo "gameoflife#${env.BUILD_NUMBER} SUCCESSFULLY deployed to http://52.202.249.4:80"
         }
     }
 
