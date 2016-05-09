@@ -64,7 +64,7 @@ node ('ec2'){
                 }
             }
         }
-        echo "couchbase#${env.BUILD_NUMBER} SUCCESSFULLY deployed to http://52.200.92.100:8080/gameoflife”
+        echo "couchbase#${env.BUILD_NUMBER} SUCCESSFULLY deployed to http://52.200.92.100:8080/gameoflife"
         }
     }
         input 'Does staging http://52.200.92.100:8080/gameoflife look okay?'
