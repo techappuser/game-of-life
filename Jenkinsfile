@@ -57,7 +57,7 @@ node ('ec2'){
         timeout(time: 5, unit: 'MINUTES') {
             waitUntil {
                 try {
-                    sh "curl http://52.200.92.100:8080/gameoflife”
+                    sh "curl http://52.200.92.100:8080/gameoflife"
                     return true
                 } catch (Exception e) {
                     return false
