@@ -65,16 +65,10 @@ node ('ec2'){
             }
         }
         echo "gameoflife#${env.BUILD_NUMBER} SUCCESSFULLY deployed to http://52.200.92.100:80"
-        }
-    }
         input 'Does staging http://52.200.92.100:80 look okay?'
-
   
   stage 'Deploy to ECS'
   //Deploy image to production in ECS
-  def buildenv = docker.image('cloudbees/java-build-tools:0.0.7.1')
-  buildenv.inside {
-    wrap([$class: 'AmazonAwsCliBuildWrapper', credentialsId: '20f6b2e4-7fbe-4655-8b4b-9842ec81bce2', defaultRegion: 'us-east-1']) {
         sh "aws ecs update-service --service production-deploy-game  --cluster production --desired-count 0"
         timeout(time: 5, unit: 'MINUTES') {
             waitUntil {
@@ -112,7 +106,6 @@ node ('ec2'){
             }
         }
         echo "gameoflife#${env.BUILD_NUMBER} SUCCESSFULLY deployed to http://52.202.249.4:80"
-        }
     }
-
+  }
 }
