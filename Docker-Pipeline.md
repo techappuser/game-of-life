@@ -27,7 +27,7 @@ This demo will show how to set up a Docker-based build and deploy pipeline in Je
 - Run the Maven tests
 - Build the application
 - Package the application in a Docker image using this repo's Dockerfile
-- Deploy the application's Docker image [to DockerHub with a "docker-demo" tag](https://hub.docker.com/r/lavaliere/couchbase/tags/)
+- Deploy the application's Docker image to DockerHub with a "docker-demo" tag
 - Deploy the image to a staging server in Amazon's container service (ECS) and prompt for manual approval
 - Kill the previously running production container in ECS
 - Deploy the latest image into ECS
