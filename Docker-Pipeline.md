@@ -1,6 +1,6 @@
 
-This demo will show how to set up a Docker-based build and deploy pipeline in Jenkins using all open-source plugins.
-- Master in AWS running Jenkins 2.1
+This demo will show how to set up a Docker-based build and deploy pipeline in Jenkins.
+- Master in AWS running Jenkins 2.7.2
 - Agent is an AWS EC2 instance with Docker, Maven, Git, and Java 8 installed on Ubuntu connected to Jenkins with an SSH Connector
 - Staging server is running in ECS
 - Deployment server is running in ECS
@@ -12,7 +12,7 @@ This demo will show how to set up a Docker-based build and deploy pipeline in Je
 - Pipeline Stage View Plugin
 - CloudBees Docker Build and Publish Plugin
 - CloudBees Custom Build Environments Plugin
-- CloudBees AWS CLI Plugin
+- CloudBees AWS CLI Plugin - CJE proprietary plugin
 
 # Required agent tools
 - Maven
