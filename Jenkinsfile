@@ -1,25 +1,65 @@
 //Picking a build agent labeled "ec2" to run pipeline on
 node (){
   def buildNumber=params.appMajorVersion + "." + env.BUILD_NUMBER
+  def appName=params.appName
+  def appMajorVersion=params.appMajorVersion
+  def ecsClusterName=params.ecsClusterName
+  def ecsTaskDefinition=params.ecsTaskDefinition
+  def ecsService=params.ecsService
+  def awsEcr=params.awsEcr
+  def awsRegion=params.awsRegion
+  
   stage 'Preflight'
-   if(params.appName)
+   if(appName)
 	{
-		println 'appName : ' + params.appName
+		println 'appName : ' + appName
 	}
 	else
 	{
-		println 'appName is empty'
 		error('appName is empty')
 	} 
-   if(params.appMajorVersion)
+   if(appMajorVersion)
 	{
-		println 'appMajorVersion : ' + params.appMajorVersion
+		println 'appMajorVersion : ' + appMajorVersion
 	}
 	else
 	{
-		println 'appMajorVersion is empty'
-		System.exit(0)
-	} 
+		error('appMajorVersion is empty')
+	}
+	if(ecsClusterName)
+	{
+		println 'ecsClusterName : ' + ecsClusterName
+	}
+	else
+	{
+		error('ecsClusterName is empty')
+	}
+	if(ecsTaskDefinition)
+	{
+		println 'ecsTaskDefinition : ' + ecsTaskDefinition
+	}
+	else
+	{
+		error('ecsTaskDefinition is empty')
+	}
+	if(ecsService)
+	{
+		println 'ecsService : ' + ecsService
+	}
+	else
+	{
+		error('ecsService is empty')
+	}
+	if(awsEcr)
+	{
+		println 'ecsService : ' + ecsService
+	}
+	else
+	{
+		error('ecsService is empty')
+	}
+	
+	
   currentBuild.displayName = "${buildNumber}"
   stage 'Pull from SCM'  
   //Passing the pipeline the ID of my GitHub credentials and specifying the repo for my app
@@ -35,18 +75,18 @@ node (){
   
   stage 'Build Image'
   //Packaging the image into a Docker image
-  def pkg = docker.build ('lavaliere/game-of-life', '.')
+  def pkg = docker.build (appName, '.')
 
   
   stage 'Push Image to ECR'
   //Pushing the packaged app in image into DockerHub
-  docker.withRegistry ('https://206748326815.dkr.ecr.us-east-2.amazonaws.com/lavaliere/game-of-life', 'ecr:us-east-2:aws-credentials') {
+  docker.withRegistry ("${awsEcr}" + "/" + "${appName}", "ecr:" + "${awsRegion}" + ":aws-credentials") {
       sh 'ls -lart' 
       pkg.push "${buildNumber}"
   }
-  
+  /*
   stage 'Deploy to ECS'
-  //Deploy image to production in ECS
+  //Deploy image to ecs cluster in ECS
         sh "aws ecs update-service --service production-deploy-game  --cluster production --desired-count 0"
         timeout(time: 5, unit: 'MINUTES') {
             waitUntil {
@@ -84,6 +124,6 @@ node (){
             }
         }
         echo "gameoflife#${env.BUILD_NUMBER} SUCCESSFULLY deployed to http://52.202.249.4:80"
-    
-  */
+    */
+  
 }
