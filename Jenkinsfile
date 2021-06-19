@@ -84,13 +84,15 @@ node (){
       sh 'ls -lart' 
       pkg.push "${buildNumber}"
   }
-  /*
+  
   stage 'Deploy to ECS'
   //Deploy image to ecs cluster in ECS
-        sh "aws ecs update-service --service production-deploy-game  --cluster production --desired-count 0"
+  
+  
+        sh "aws ecs update-service --service ${ecsService}  --cluster ${ecsClusterName} --desired-count 0"
         timeout(time: 5, unit: 'MINUTES') {
             waitUntil {
-                sh "aws ecs describe-services --service production-deploy-game  --cluster production   > .amazon-ecs-service-status.json"
+                sh "aws ecs describe-services --service ${ecsService}  --cluster ${ecsClusterName}   > .amazon-ecs-service-status.json"
 
                 // parse `describe-services` output
                 def ecsServicesStatusAsJson = readFile(".amazon-ecs-service-status.json")
@@ -100,10 +102,10 @@ node (){
                 return ecsServiceStatus.get('runningCount') == 0 && ecsServiceStatus.get('status') == "ACTIVE"
             }
         }
-        sh "aws ecs update-service --service production-deploy-game  --cluster production  --desired-count 1"
+        sh "aws ecs update-service --service ${ecsService}  --cluster ${ecsClusterName}  --desired-count 1"
         timeout(time: 5, unit: 'MINUTES') {
             waitUntil {
-                sh "aws ecs describe-services --service production-deploy-game  --cluster production  > .amazon-ecs-service-status.json"
+                sh "aws ecs describe-services --service ${ecsService}  --cluster ${ecsClusterName}  > .amazon-ecs-service-status.json"
 
                 // parse `describe-services` output
                 def ecsServicesStatusAsJson = readFile(".amazon-ecs-service-status.json")
@@ -116,14 +118,14 @@ node (){
         timeout(time: 5, unit: 'MINUTES') {
             waitUntil {
                 try {
-                    sh "curl http://52.202.249.4:80"
+                    sh "curl http://18.221.96.111:8080"
                     return true
                 } catch (Exception e) {
                     return false
                 }
             }
         }
-        echo "gameoflife#${env.BUILD_NUMBER} SUCCESSFULLY deployed to http://52.202.249.4:80"
-    */
+        echo "gameoflife#${env.BUILD_NUMBER} SUCCESSFULLY deployed to http://18.221.96.111:8080"
+    
   
 }
