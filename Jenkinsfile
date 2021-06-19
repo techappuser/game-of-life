@@ -1,7 +1,16 @@
 //Picking a build agent labeled "ec2" to run pipeline on
 node (){
-  def buildNumber=params.APP_MAJOR_VERSION + "." + env.BUILD_NUMBER
+  def buildNumber=params.appMajorVersion + "." + env.BUILD_NUMBER
   stage 'Preflight'
+   if(params.appName)
+	{
+		println 'appName : ' + params.appName
+	}
+	else
+	{
+		println 'appName is empty'
+		error('appName is empty')
+	} 
    if(params.appMajorVersion)
 	{
 		println 'appMajorVersion : ' + params.appMajorVersion
@@ -16,7 +25,7 @@ node (){
   //Passing the pipeline the ID of my GitHub credentials and specifying the repo for my app
   git credentialsId: '32f2c3c2-c19e-431a-b421-a4376fce1186', url: 'https://github.com/techappuser/game-of-life.git'
   stage 'Test Code'  
- /*
+ 
   sh 'mvn install'
  
   stage 'Build App' 
@@ -33,7 +42,7 @@ node (){
   //Pushing the packaged app in image into DockerHub
   docker.withRegistry ('https://206748326815.dkr.ecr.us-east-2.amazonaws.com/lavaliere/game-of-life', 'ecr:us-east-2:aws-credentials') {
       sh 'ls -lart' 
-      pkg.push 'docker-demo'
+      pkg.push "${buildNumber}"
   }
   
   stage 'Deploy to ECS'
