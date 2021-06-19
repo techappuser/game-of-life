@@ -18,7 +18,7 @@ node (){
   
   stage 'Push Image to DockerHub'
   //Pushing the packaged app in image into DockerHub
-  docker.withRegistry ('https://206748326815.dkr.ecr.us-east-2.amazonaws.com/my-app-images', 'ecr:us-east-2:aws-credentials') {
+  docker.withRegistry ('https://206748326815.dkr.ecr.us-east-2.amazonaws.com/lavaliere/game-of-life', 'ecr:us-east-2:aws-credentials') {
       sh 'ls -lart' 
       pkg.push 'docker-demo'
   }
