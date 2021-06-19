@@ -1,16 +1,17 @@
 //Picking a build agent labeled "ec2" to run pipeline on
 node (){
-  	
+  def buildNumber=params.APP_MAJOR_VERSION + "." + env.BUILD_NUMBER
   stage 'Preflight'
    if(params.appMajorVersion)
-				 {
-					println 'APP_MAJOR_VERSION : ' + params.appMajorVersion
-				 }
-				 else
-				 {
-					println 'APP_MAJOR_VERSION is empty'
-					System.exit(0)
-				 }  
+	{
+		println 'appMajorVersion : ' + params.appMajorVersion
+	}
+	else
+	{
+		println 'appMajorVersion is empty'
+		System.exit(0)
+	} 
+  currentBuild.displayName = "${buildNumber}"
   stage 'Pull from SCM'  
   //Passing the pipeline the ID of my GitHub credentials and specifying the repo for my app
   git credentialsId: '32f2c3c2-c19e-431a-b421-a4376fce1186', url: 'https://github.com/techappuser/game-of-life.git'
