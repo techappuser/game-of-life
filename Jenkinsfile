@@ -2,7 +2,7 @@
 node (){
   stage 'Pull from SCM'  
   //Passing the pipeline the ID of my GitHub credentials and specifying the repo for my app
-  git credentialsId: '32f2c3c2-c19e-431a-b421-a4376fce1186', url: 'https://github.com/lavaliere/game-of-life.git'
+  git credentialsId: '32f2c3c2-c19e-431a-b421-a4376fce1186', url: 'https://github.com/techappuser/game-of-life.git'
   stage 'Test Code'  
   sh 'mvn install'
 
@@ -18,7 +18,7 @@ node (){
   
   stage 'Push Image to DockerHub'
   //Pushing the packaged app in image into DockerHub
-  docker.withRegistry ('https://index.docker.io/v1/', 'ed17cd18-975e-4224-a231-014ecd23942b') {
+  docker.withRegistry ('206748326815.dkr.ecr.us-east-2.amazonaws.com/my-app-images', 'ecr:us-east-2:aws-credentials') {
       sh 'ls -lart' 
       pkg.push 'docker-demo'
   }
