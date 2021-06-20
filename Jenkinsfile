@@ -64,6 +64,7 @@ node (){
   stage 'Pull from SCM'  
   //Passing the pipeline the ID of my GitHub credentials and specifying the repo for my app
   git credentialsId: '32f2c3c2-c19e-431a-b421-a4376fce1186', url: 'https://github.com/techappuser/game-of-life.git'
+ /*
   stage 'Test Code'  
  
   sh 'mvn install'
@@ -84,11 +85,13 @@ node (){
       sh 'ls -lart' 
       pkg.push "${buildNumber}"
   }
-  
+  */
   stage 'Deploy to ECS'
   //Deploy image to ecs cluster in ECS
   
-  
+  def buildenv = docker.image('cloudbees/java-build-tools:0.0.7.1')
+  buildenv.inside {
+    wrap([$class: 'AmazonAwsCliBuildWrapper', credentialsId: 'aws-credentials', defaultRegion: awsRegion]) {
         sh "aws ecs update-service --service ${ecsService}  --cluster ${ecsClusterName} --desired-count 0"
         timeout(time: 5, unit: 'MINUTES') {
             waitUntil {
@@ -126,6 +129,6 @@ node (){
             }
         }
         echo "gameoflife#${env.BUILD_NUMBER} SUCCESSFULLY deployed to http://18.221.96.111:8080"
-    
+    }
   
 }
