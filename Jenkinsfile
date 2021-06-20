@@ -68,7 +68,7 @@ node ('ec2'){
         input 'Does staging http://52.200.92.100:80 look okay?'
   
   stage 'Deploy to ECS'
-  //Deploy image to production in ECS
+  //Deploy image to production in ECS 
         sh "aws ecs update-service --service production-deploy-game  --cluster production --desired-count 0"
         timeout(time: 5, unit: 'MINUTES') {
             waitUntil {
