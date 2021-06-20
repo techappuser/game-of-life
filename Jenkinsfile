@@ -10,6 +10,7 @@ node (){
   def awsRegion=params.awsRegion
   
   stage 'Preflight'
+  {
    if(appName)
 	{
 		println 'appName : ' + appName
@@ -60,60 +61,62 @@ node (){
 	}
 	
 	
-  currentBuild.displayName = "${appName}" + " - " +"${buildNumber}"
-  stage 'Pull from SCM'  
-  //Passing the pipeline the ID of my GitHub credentials and specifying the repo for my app
-  git credentialsId: '32f2c3c2-c19e-431a-b421-a4376fce1186', url: 'https://github.com/techappuser/game-of-life.git'
- /*
+	currentBuild.displayName = "${appName}" + " - " +"${buildNumber}"
+  }
+  stage 'Pull from SCM' 
+  {  
+	  //Passing the pipeline the ID of my GitHub credentials and specifying the repo for my app
+	  git credentialsId: '32f2c3c2-c19e-431a-b421-a4376fce1186', url: 'https://github.com/techappuser/game-of-life.git'
+  }
   stage 'Test Code'  
- 
-  sh 'mvn install'
- 
-  stage 'Build App' 
-  //Running the maven build and archiving the war
-  sh 'mvn install'
-  archive 'target/*.war'
-  
-  stage 'Build Image'
-  //Packaging the image into a Docker image
-  def pkg = docker.build (appName.toLowerCase(), '.')
-
+  {
+	sh 'mvn install'
+  }
+	stage 'Build App' 
+  {
+	  //Running the maven build and archiving the war
+	  sh 'mvn install'
+	  archive 'target/*.war'
+	  
+	  stage 'Build Image'
+	  //Packaging the image into a Docker image
+	  def pkg = docker.build (appName.toLowerCase(), '.')
+  }
   
   stage 'Push Image to ECR'
-  //Pushing the packaged app in image into DockerHub
-  docker.withRegistry (awsEcr + "/" + appName.toLowerCase(), "ecr:" + awsRegion + ":aws-credentials") {
-      sh 'ls -lart' 
-      pkg.push "${buildNumber}"
+  {
+	  //Pushing the packaged app in image into DockerHub
+	  docker.withRegistry (awsEcr + "/" + appName.toLowerCase(), "ecr:" + awsRegion + ":aws-credentials") {
+		  sh 'ls -lart' 
+		  pkg.push "latest"
   }
-  */
+  }
   stage 'Deploy to ECS'
+  {
   //Deploy image to ecs cluster in ECS
   
-  def buildenv = docker.image('cloudbees/java-build-tools:0.0.7.1')
-  buildenv.inside {
-    wrap([$class: 'AmazonAwsCliBuildWrapper', credentialsId: 'aws-credentials', defaultRegion: awsRegion]) {
-        sh "aws ecs update-service --service ${ecsService}  --cluster ${ecsClusterName} --desired-count 0"
+        sh "/usr/local/bin/aws  ecs update-service --service ${ecsService}  --cluster ${ecsClusterName} --desired-count 0"
         timeout(time: 5, unit: 'MINUTES') {
             waitUntil {
-                sh "aws ecs describe-services --service ${ecsService}  --cluster ${ecsClusterName}   > .amazon-ecs-service-status.json"
+                sh "/usr/local/bin/aws  ecs describe-services --service ${ecsService}  --cluster ${ecsClusterName}   > .amazon-ecs-service-status.json"
 
                 // parse `describe-services` output
                 def ecsServicesStatusAsJson = readFile(".amazon-ecs-service-status.json")
                 def ecsServicesStatus = new groovy.json.JsonSlurper().parseText(ecsServicesStatusAsJson)
-                println "$ecsServicesStatus"
+               // println "$ecsServicesStatus"
                 def ecsServiceStatus = ecsServicesStatus.services[0]
                 return ecsServiceStatus.get('runningCount') == 0 && ecsServiceStatus.get('status') == "ACTIVE"
             }
         }
-        sh "aws ecs update-service --service ${ecsService}  --cluster ${ecsClusterName}  --desired-count 1"
+        sh "/usr/local/bin/aws  ecs update-service --service ${ecsService}  --cluster ${ecsClusterName}  --desired-count 1"
         timeout(time: 5, unit: 'MINUTES') {
             waitUntil {
-                sh "aws ecs describe-services --service ${ecsService}  --cluster ${ecsClusterName}  > .amazon-ecs-service-status.json"
+                sh "/usr/local/bin/aws  ecs describe-services --service ${ecsService}  --cluster ${ecsClusterName}  > .amazon-ecs-service-status.json"
 
                 // parse `describe-services` output
                 def ecsServicesStatusAsJson = readFile(".amazon-ecs-service-status.json")
                 def ecsServicesStatus = new groovy.json.JsonSlurper().parseText(ecsServicesStatusAsJson)
-                println "$ecsServicesStatus"
+               // println "$ecsServicesStatus"
                 def ecsServiceStatus = ecsServicesStatus.services[0]
                 return ecsServiceStatus.get('runningCount') == 0 && ecsServiceStatus.get('status') == "ACTIVE"
             }
@@ -129,6 +132,5 @@ node (){
             }
         }
         echo "gameoflife#${env.BUILD_NUMBER} SUCCESSFULLY deployed to http://18.221.96.111:8080"
-    }
-  
+  }
 }
