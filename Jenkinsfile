@@ -104,7 +104,7 @@
 					// parse `describe-services` output
 					def ecsServicesStatusAsJson = readFile(".amazon-ecs-service-status.json")
 					def ecsServicesStatus = new groovy.json.JsonSlurper().parseText(ecsServicesStatusAsJson)
-				   // println "$ecsServicesStatus"
+				   // println "$ecsServicesStatus" 
 					def ecsServiceStatus = ecsServicesStatus.services[0]
 					return ecsServiceStatus.get('runningCount') == 0 && ecsServiceStatus.get('status') == "ACTIVE"
 				}
