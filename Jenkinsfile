@@ -80,7 +80,7 @@
 		  archive 'target/*.war'
 		  
 		  stage 'Build Image'
-		  //Packaging the image into a Docker image
+		  //Packaging the image into a Docker image 
 		   pkg = docker.build (appName.toLowerCase(), '.')
 	  }
 	  
