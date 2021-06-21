@@ -7,7 +7,7 @@
 	  def ecsService=params.ecsService
 	  def awsEcr=params.awsEcr
 	  def awsRegion=params.awsRegion
-	  def pkg
+	  def dockerImage
 	  
 	  stage('Preflight')
 	  {
@@ -60,36 +60,37 @@
 			error('ecsService is empty')
 		}
 		
-		
+		//Update Build Displayname
 		currentBuild.displayName = "${appName}" + " - " +"${buildNumber}"
 	  }
 	  
 	  stage('Pull from SCM') 
 	  {  
 		  //Passing the pipeline the ID of my GitHub credentials and specifying the repo for my app
-		  git credentialsId: '32f2c3c2-c19e-431a-b421-a4376fce1186', url: 'https://github.com/techappuser/game-of-life.git'
+		  git credentialsId: 'git-access', url: 'https://github.com/techappuser/game-of-life.git'
 	  }
-	  stage('Test Code')  
+	  stage('Code Analysis')  
 	  {
-		sh 'mvn install'
+		println 'Code Scan Stage'
 	  }
 		stage('Build App') 
 	  {
 		  //Running the maven build and archiving the war
 		  sh 'mvn install'
 		  archive 'target/*.war'
-		  
-		  stage 'Build Image'
+	  }  
+      stage 'Build Image'
+	  {
 		  //Packaging the image into a Docker image  
-		   pkg = docker.build (appName.toLowerCase(), '.')
+		   dockerImage = docker.build (appName.toLowerCase(), '.')
 	  }
 	  
 	  stage('Push Image to ECR')
 	  {
-		  //Pushing the packaged app in image into DockerHub
+		  //Pushing image to ECR
 		  docker.withRegistry (awsEcr + "/" + appName.toLowerCase(), "ecr:" + awsRegion + ":aws-credentials") {
 			  sh 'ls -lart' 
-			  pkg.push "latest"
+			  dockerImage.push "latest"
 	  }
 	  }
 	  stage('Deploy to ECS')
@@ -100,11 +101,8 @@
 			timeout(time: 5, unit: 'MINUTES') {
 				waitUntil {
 					sh "/usr/local/bin/aws  ecs describe-services --service ${ecsService}  --cluster ${ecsClusterName}   > .amazon-ecs-service-status.json"
-
-					// parse `describe-services` output
 					def ecsServicesStatusAsJson = readFile(".amazon-ecs-service-status.json")
 					def ecsServicesStatus = new groovy.json.JsonSlurper().parseText(ecsServicesStatusAsJson)
-				   // println "$ecsServicesStatus" 
 					def ecsServiceStatus = ecsServicesStatus.services[0]
 					return ecsServiceStatus.get('runningCount') == 0 && ecsServiceStatus.get('status') == "ACTIVE"
 				}
