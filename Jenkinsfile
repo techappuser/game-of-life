@@ -79,7 +79,7 @@
 		  sh 'mvn install'
 		  archive 'target/*.war'
 	  }  
-      stage 'Build Image'
+      stage('Build Image')
 	  {
 		  //Packaging the image into a Docker image  
 		   dockerImage = docker.build (appName.toLowerCase(), '.')
@@ -88,41 +88,37 @@
 	  stage('Push Image to ECR')
 	  {
 		  //Pushing image to ECR
-		  docker.withRegistry (awsEcr + "/" + appName.toLowerCase(), "ecr:" + awsRegion + ":aws-credentials") {
+		  docker.withRegistry (awsEcr + "/" + appName.toLowerCase(), "ecr:" + awsRegion + ":aws-credentials") 
+		   {
 			  sh 'ls -lart' 
 			  dockerImage.push "latest"
-	  }
+			}
 	  }
 	  stage('Deploy to ECS')
 	  {
-	  //Deploy image to ecs cluster in ECS
-	  
-			sh "/usr/local/bin/aws  ecs update-service --service ${ecsService}  --cluster ${ecsClusterName} --desired-count 0 >.amazon-ecs-service-update.json"
-			timeout(time: 5, unit: 'MINUTES') {
-				waitUntil {
-					sh "/usr/local/bin/aws  ecs describe-services --service ${ecsService}  --cluster ${ecsClusterName}   > .amazon-ecs-service-status.json"
-					def ecsServicesStatusAsJson = readFile(".amazon-ecs-service-status.json")
-					def ecsServicesStatus = new groovy.json.JsonSlurper().parseText(ecsServicesStatusAsJson)
-					def ecsServiceStatus = ecsServicesStatus.services[0]
-					return ecsServiceStatus.get('runningCount') == 0 && ecsServiceStatus.get('status') == "ACTIVE"
-				}
+	 	 //Deploy image to ecs cluster in ECS  
+		sh "/usr/local/bin/aws  ecs update-service --service ${ecsService}  --cluster ${ecsClusterName} --desired-count 0 >.amazon-ecs-service-update.json"
+		timeout(time: 5, unit: 'MINUTES') {
+			waitUntil {
+				sh "/usr/local/bin/aws  ecs describe-services --service ${ecsService}  --cluster ${ecsClusterName}   > .amazon-ecs-service-status.json"
+				def ecsServicesStatusAsJson = readFile(".amazon-ecs-service-status.json")
+				def ecsServicesStatus = new groovy.json.JsonSlurper().parseText(ecsServicesStatusAsJson)
+				def ecsServiceStatus = ecsServicesStatus.services[0]
+				return ecsServiceStatus.get('runningCount') == 0 && ecsServiceStatus.get('status') == "ACTIVE"
 			}
-			sh "/usr/local/bin/aws  ecs update-service --service ${ecsService}  --cluster ${ecsClusterName}  --desired-count 1 >.amazon-ecs-service-update.json"
-			timeout(time: 5, unit: 'MINUTES') {
-				waitUntil {
-					sh "/usr/local/bin/aws  ecs describe-services --service ${ecsService}  --cluster ${ecsClusterName}  > .amazon-ecs-service-status.json"
-
-					// parse `describe-services` output
-					def ecsServicesStatusAsJson = readFile(".amazon-ecs-service-status.json")
-					def ecsServicesStatus = new groovy.json.JsonSlurper().parseText(ecsServicesStatusAsJson)
-				   // println "$ecsServicesStatus"
-					def ecsServiceStatus = ecsServicesStatus.services[0]
-					return ecsServiceStatus.get('runningCount') >= 1 && ecsServiceStatus.get('status') == "ACTIVE"
-				}
+		}
+		sh "/usr/local/bin/aws  ecs update-service --service ${ecsService}  --cluster ${ecsClusterName}  --desired-count 1 >.amazon-ecs-service-update.json"
+		timeout(time: 5, unit: 'MINUTES') {
+			waitUntil {
+				sh "/usr/local/bin/aws  ecs describe-services --service ${ecsService}  --cluster ${ecsClusterName}  > .amazon-ecs-service-status.json"
+				def ecsServicesStatusAsJson = readFile(".amazon-ecs-service-status.json")
+				def ecsServicesStatus = new groovy.json.JsonSlurper().parseText(ecsServicesStatusAsJson)
+				def ecsServiceStatus = ecsServicesStatus.services[0]
+				return ecsServiceStatus.get('runningCount') >= 1 && ecsServiceStatus.get('status') == "ACTIVE"
 			}
+		}
 			
-	  }
-	  
+	  }  
 	  stage('Test Application')
 	  {
 		  //Get task arn from task list
