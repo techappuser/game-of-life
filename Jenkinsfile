@@ -148,7 +148,7 @@
 					}
 				}
 			}
-			echo "gameoflife#${env.BUILD_NUMBER} SUCCESSFULLY deployed to http://$ecsTaskPublicIp:8080"
+			echo "gameoflife#${buildNumber} Successfully deployed."
 		
 	  }
 	}
