@@ -69,7 +69,7 @@
 		  //Passing the pipeline the ID of my GitHub credentials and specifying the repo for my app
 		  git credentialsId: 'git-access', url: 'https://github.com/techappuser/game-of-life.git'
 	  }
-	 /* stage('Code Analysis')  
+	  /*stage('Code Analysis')  
 	  {
 		println 'Code Scan Stage'
 	  }
@@ -96,13 +96,13 @@
 			}
 	  }*/
 	  stage('Deploy to ECS')
-	  {
-		   buildNumber="1.8"
+	  {   
+	      buildNumber="1.8"
 		  //Get current task definition json
 		  sh("/usr/local/bin/aws ecs describe-task-definition --task-definition $ecsTaskDefinition --region $awsRegion --output json > $ecsTaskDefinition'.json'")
 		  
 		  // Create a new task definition for this build
-		  sh("cat $ecsTaskDefinition'.json' | jq '.taskDefinition.containerDefinitions[].image=\"$awsEcr:$buildNumber\"' > $ecsTaskDefinition'_'$buildNumber'.json'")
+		  sh("cat $ecsTaskDefinition'.json' | jq '.taskDefinition.containerDefinitions[].image=\"$awsEcr:$buildNumber\"' | jq '.taskDefinition|{networkMode : .networkMode, family: .family, placementConstraints: .placementConstraints, cpu : .cpu, executionRoleArn: .executionRoleArn,  volumes: .volumes, memory : .memory, requiresCompatibilities : .requiresCompatibilities,  containerDefinitions: .containerDefinitions}' > $ecsTaskDefinition'_'$buildNumber'.json'")
 		  
 		  //Register new task definition
 		  sh("/usr/local/bin/aws ecs register-task-definition --family $ecsTaskDefinition --region $awsRegion --requires-compatibilities FARGATE --cli-input-json file://$ecsTaskDefinition'_'$buildNumber'.json'")
