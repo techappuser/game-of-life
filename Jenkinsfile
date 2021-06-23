@@ -91,7 +91,7 @@
 		  docker.withRegistry (awsEcr + "/" + appName.toLowerCase(), "ecr:" + awsRegion + ":aws-credentials") 
 		   {
 			  sh 'ls -lart' 
-			  dockerImage.push "latest"
+			  dockerImage.push "${buildNumber}"
 			}
 	  }
 	  stage('Deploy to ECS')
