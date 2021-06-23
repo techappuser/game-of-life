@@ -69,7 +69,7 @@
 		  //Passing the pipeline the ID of my GitHub credentials and specifying the repo for my app
 		  git credentialsId: 'git-access', url: 'https://github.com/techappuser/game-of-life.git'
 	  }
-	  /*stage('Code Analysis')  
+	  stage('Code Analysis')  
 	  {
 		println 'Code Scan Stage'
 	  }
@@ -94,10 +94,10 @@
 			  dockerImage.push "${buildNumber}"
 			  
 			}
-	  }*/
+	  }
 	  stage('Deploy to ECS')
 	  {   
-	      buildNumber="1.8"
+	     
 		  //Get current task definition json
 		  sh("/usr/local/bin/aws ecs describe-task-definition --task-definition $ecsTaskDefinition --region $awsRegion --output json > $ecsTaskDefinition'.json'")
 		  
@@ -141,7 +141,7 @@
         timeout(time: 2, unit: 'MINUTES') {
 				waitUntil {
 					try {
-						sh "curl http://$loadBalancerUrl:8080"
+						sh "curl $loadBalancerUrl:8080"
 						return true
 					} catch (Exception e) {
 						return false
