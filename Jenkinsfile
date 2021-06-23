@@ -88,7 +88,7 @@
 	  stage('Push Image to ECR')
 	  {
 		  //Pushing image to ECR
-		  docker.withRegistry (awsEcr + "/" + appName.toLowerCase(), "ecr:" + awsRegion + ":aws-credentials") 
+		  docker.withRegistry ("https://" + awsEcr + "/" + appName.toLowerCase(), "ecr:" + awsRegion + ":aws-credentials") 
 		   {
 			  sh 'ls -lart' 
 			  dockerImage.push "${buildNumber}"
@@ -103,7 +103,7 @@
 		  sh("cat $ecsTaskDefinition'.json' | jq '.taskDefinition.containerDefinitions[].image=\"$awsEcr:$buildNumber\"' > $ecsTaskDefinition'_'$buildNumber'.json'")
 		  
 		  //Register new task definition
-		  sh("/usr/local/bin/aws ecs register-task-definition --family $ecsTaskDefinition --region $awsRegion --requires-compatibilities FARGATE --cli-input-json \"file://$ecsTaskDefinition\"_\"$buildNumber\".json\"\"")
+		  sh("/usr/local/bin/aws ecs register-task-definition --family $ecsTaskDefinition --region $awsRegion --requires-compatibilities FARGATE --cli-input-json file://$ecsTaskDefinition'_'$buildNumber'.json'")
 		  
 		  // Update the service with the new task definition and desired count
 		  taskRevision=sh(returnStdout: true, script: "/usr/local/bin/aws ecs describe-task-definition --task-definition $ecsTaskDefinition --region $awsRegion | jq .taskDefinition.revision").trim()
