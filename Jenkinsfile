@@ -96,18 +96,32 @@
 	  }
 	  stage('Deploy to ECS')
 	  {
-	 	 //Deploy image to ecs cluster in ECS  
-		sh "/usr/local/bin/aws  ecs update-service --service ${ecsService}  --cluster ${ecsClusterName} --desired-count 0 >.amazon-ecs-service-update.json"
-		timeout(time: 5, unit: 'MINUTES') {
-			waitUntil {
-				sh "/usr/local/bin/aws  ecs describe-services --service ${ecsService}  --cluster ${ecsClusterName}   > .amazon-ecs-service-status.json"
-				def ecsServicesStatusAsJson = readFile(".amazon-ecs-service-status.json")
-				def ecsServicesStatus = new groovy.json.JsonSlurper().parseText(ecsServicesStatusAsJson)
-				def ecsServiceStatus = ecsServicesStatus.services[0]
-				return ecsServiceStatus.get('runningCount') == 0 && ecsServiceStatus.get('status') == "ACTIVE"
-			}
-		}
-		sh "/usr/local/bin/aws  ecs update-service --service ${ecsService}  --cluster ${ecsClusterName}  --desired-count 1 >.amazon-ecs-service-update.json"
+		  //Get current task definition json
+		  sh("/usr/local/bin/aws ecs describe-task-definition --task-definition $ecsTaskDefinition --region $awsRegion --output json > $ecsTaskDefinition'.json'")
+		  
+		  // Create a new task definition for this build
+		  sh("cat $ecsTaskDefinition'.json' | jq '.taskDefinition.containerDefinitions[].image=\"$awsEcr:$buildNumber\"' > $ecsTaskDefinition'_'$buildNumber'.json'")
+		  
+		  //Register new task definition
+		  sh("/usr/local/bin/aws ecs register-task-definition --family $ecsTaskDefinition --region $awsRegion --requires-compatibilities FARGATE --cli-input-json \"file://$ecsTaskDefinition\"_\"$buildNumber\".json\"\"")
+		  
+		  // Update the service with the new task definition and desired count
+		  taskRevision=sh(returnStdout: true, script: "/usr/local/bin/aws ecs describe-task-definition --task-definition $ecsTaskDefinition --region $awsRegion | jq .taskDefinition.revision").trim()
+			
+		  println 'New Task Revision : ' +  taskRevision
+			
+		  //Get Desire Count
+		  cntDesired=sh(returnStdout: true, script: "/usr/local/bin/aws ecs describe-services --cluster $ecsClusterName --services $ecsService --region $awsRegion | jq .services[].desiredCount").trim()
+		  
+		  if (cntDesired == "0")
+		  {
+			  println 'Current Desire count is 0. So Setting it to 1 '
+			  cntDesired="1"
+		  }
+		  
+		  //Update service
+		  sh("/usr/local/bin/aws ecs update-service --cluster $ecsClusterName --service $ecsService --task-definition $ecsTaskDefinition:$taskRevision --desired-count $cntDesired")
+			
 		timeout(time: 5, unit: 'MINUTES') {
 			waitUntil {
 				sh "/usr/local/bin/aws  ecs describe-services --service ${ecsService}  --cluster ${ecsClusterName}  > .amazon-ecs-service-status.json"
