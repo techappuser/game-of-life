@@ -137,26 +137,11 @@
 	  }  
 	  stage('Test Application')
 	  {
-		  //Get task arn from task list
-		sh "/usr/local/bin/aws ecs list-tasks --cluster ${ecsClusterName}  --service ${ecsService}  > .amazon-ecs-task-list.json"
-		def ecsServiceTaskArn=sh(returnStdout: true, script: 'cat .amazon-ecs-task-list.json | jq ".taskArns[]"').trim()
-		println "Task ARN : $ecsServiceTaskArn"
-		
-		//Get ENI Id from tasks
-		sh "/usr/local/bin/aws ecs describe-tasks --task $ecsServiceTaskArn  > .amazon-ecs-task.json"
-		def ecsServiceEniId=sh(returnStdout: true, script: "cat  .amazon-ecs-task.json | jq '.tasks[0].attachments[0].details[]' |grep  'eni-' | cut -d ':' -f2").trim()
-		println "ENI Id : $ecsServiceEniId"
-		
-		// Get IP using eni
-		sh "/usr/local/bin/aws ec2 describe-network-interfaces --network-interface-ids $ecsServiceEniId  > .amazon-ecs-nw-interface.json"
-		def ecsTaskPublicIp=sh(returnStdout: true, script: "cat .amazon-ecs-nw-interface.json | jq '.NetworkInterfaces[].Association.PublicIp' | tr -d '\"' ").trim()
-		println "PublicIp : $ecsTaskPublicIp"
-		
-		// Test public ip
+		 
         timeout(time: 2, unit: 'MINUTES') {
 				waitUntil {
 					try {
-						sh "curl http://$ecsTaskPublicIp:8080"
+						sh "curl http://$loadBalancerUrl:8080"
 						return true
 					} catch (Exception e) {
 						return false
